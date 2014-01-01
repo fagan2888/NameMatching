@@ -7,19 +7,15 @@ import matplotlib.pyplot as plt
 from matplotlib import pylab
 from collections import Counter
 
-LETTERS = ["a", "b", "c", "d", "e",
-           "f", "g", "h", "i", "j",
-           "k", "l", "m", "n", "o",
-           "p", "q", "r", "s", "t",
-           "u", "v", "w", "x", "y", "z", " "]
+# Got this from here: https://wiki.python.org/moin/BitManipulation
+# Adds up the number of bits that are "on"
+def bitCount(int_type):
+    count = 0
+    while(int_type):
+        int_type &= int_type - 1
+        count += 1
+    return(count)
 
-
-# Pseudo-Code:
-# "bins" will define the slices on the LETTERS list
-# 1. Given a binning, for any string, create a tuple with the count in each bin (O(n))
-# 2. Given counts, create a dict with counts as key, and list of strings as values
-# 3. For each key, create list of possible comparison group keys
-# 4. For each word, return the number of possible comparisons
 
 def removeDuplicates(stringList):
     return list(set(stringList))
@@ -95,9 +91,20 @@ testword = binDictShort[keyShort][0]
 
 compareWords = list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x) for x in binMatches[keyShort]])))
 
+
+
+#Counting the difference between two words is the number of XOR bits that are on, yes?
+
 for word2 in compareWords:
-    print bin(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
+    print "Comparing %s and %s" % (testword, word2)
+    print "Bit Representations:"
+    print "%s" % (str(bin(makeBit(testword, bitDict)))[2:])
+    print "%s" % (str(bin(makeBit(word2, bitDict)))[2:])
+    print "Difference: %d" % bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
     #print word, word2
+
+
+
 
 
 
