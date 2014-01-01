@@ -1,0 +1,3 @@
+fn2 = "call_report_names_unique.csv"
+reader = csv.reader(open(fn2,'rb'))
+ banknamesLong = [line[1].lower() for line in reader if line[2] != "rssd9348"]
