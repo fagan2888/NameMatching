@@ -6,6 +6,24 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 from matplotlib import pylab
 from collections import Counter
+import time
+
+# Timer class taken from http://www.huyng.com/posts/python-performance-analysis/
+class Timer(object):
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.secs = self.end - self.start
+        self.msecs = self.secs * 1000  # millisecs
+        if self.verbose:
+            print 'elapsed time: %f ms' % self.msecs
+
 
 # Got this from here: https://wiki.python.org/moin/BitManipulation
 # Adds up the number of bits that are "on"
@@ -44,64 +62,89 @@ banknamesLong = removeDuplicates(banknamesLong)
 banknamesShort = removeDuplicates(banknamesShort)
 
 LETTERS = list(set("".join(banknamesLong + banknamesShort)))
+threshold = 3
 
-i = 0
-bins = []
-while i  < len(LETTERS):
-    bins.append(tuple([i, i+7]))
-    i = i + 7
+with Timer() as t:
+    i = 0
+    bins = []
+    while i  < len(LETTERS):
+        bins.append(tuple([i, i+7]))
+        i = i + 7
+    bitDict = {}
+    i = 1
+    for x in xrange(len(LETTERS)):
+        bitDict[LETTERS[x]] = i
+        i = i << 1
+
+print "Startup Stage: %s seconds" % t.secs
+
 
 binDictLong = {}
 binDictShort = {}
-for name in banknamesLong:
-    try:
-        binDictLong[binCount(name,bins)].append(name)
-    except KeyError:
-        binDictLong[binCount(name,bins)] = [name]
-for name in banknamesShort:
-    try:
-        binDictShort[binCount(name,bins)].append(name)
-    except KeyError:
-        binDictShort[binCount(name,bins)] = [name]
+with Timer() as t:
+    for name in banknamesLong:
+        try:
+            binDictLong[binCount(name,bins)].append(name)
+        except KeyError:
+            binDictLong[binCount(name,bins)] = [name]
+    for name in banknamesShort:
+        try:
+            binDictShort[binCount(name,bins)].append(name)
+        except KeyError:
+            binDictShort[binCount(name,bins)] = [name]
 
-threshold = 3
-
-binDictLongKeys = np.array(binDictLong.keys())
-binMatches = {}
-nameMatchLen = {}
-for keyShort in binDictShort.keys():
-    binMatches[keyShort] = list(binDictLongKeys[np.sum(abs(binDictLongKeys - np.array(keyShort)),1) <= threshold])
-    #print len(binMatches[keyShort])
-    nameMatchLen[keyShort] = len(list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x) for x in binMatches[keyShort]]))))
+    binDictLongKeys = np.array(binDictLong.keys())
+    binMatches = {}
+    nameMatchLen = {}
+    for keyShort in binDictShort.keys():
+        binMatches[keyShort] = list(binDictLongKeys[np.sum(abs(binDictLongKeys - np.array(keyShort)),1) <= threshold])
+        nameMatchLen[keyShort] = len(list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x) for x in binMatches[keyShort]]))))
 
 
-matches = nameMatchLen.values()
-n, bins, patches = plt.hist(matches, max(matches)-min(matches), normed=1, facecolor='green', alpha=0.5, align="left")            
-pylab.savefig('numStringMatches.pdf', bbox_inches=0)
-plt.close()
-
-bitDict = {}
-i = 1
-for x in xrange(len(LETTERS)):
-    bitDict[LETTERS[x]] = i
-    i = i << 1
+print "Bin Stage: %s seconds" % t.secs
 
 
-testword = binDictShort[keyShort][0]
+# matches = nameMatchLen.values()
+# n, bins, patches = plt.hist(matches, max(matches)-min(matches), normed=1, facecolor='green', alpha=0.5, align="left")            
+# pylab.savefig('numStringMatches.pdf', bbox_inches=0)
+# plt.close()
 
-compareWords = list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x) for x in binMatches[keyShort]])))
+
+counter = 0
+successCounter = 0
+with Timer() as t:
+    for keyShort in binDictShort.keys():
+        # Gets all words from the long list in the bins that
+        # are in the ball close to the keyShort tuple.
+        compareWords = list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x) for x in binMatches[keyShort]])))
+        compareWordsBits = [makeBit(word2, bitDict) for word2 in compareWords]
+        for shortWord in binDictShort[keyShort]:
+            shortWordBits = makeBit(shortWord, bitDict)
+            for i in range(len(compareWords)):
+                if bitCount(shortWordBits ^ compareWordsBits[i]) <= threshold:
+                    successCounter = successCounter + 1
+                    # print "Comparing %s and %s" % (shortWord, compareWords[i])
+                    # print "Bit Representations:"
+                    # print "%s" % (str(bin(shortWordBits))[2:])
+                    # print "%s" % (str(bin(compareWordsBits[i]))[2:])
+                    # print "Difference: %d" % bitCount(shortWordBits ^ compareWordsBits[i]) 
+                counter = counter + 1
 
 
-
-#Counting the difference between two words is the number of XOR bits that are on, yes?
-
-for word2 in compareWords:
-    if bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict)) <= threshold:
-        print "Comparing %s and %s" % (testword, word2)
-        print "Bit Representations:"
-        print "%s" % (str(bin(makeBit(testword, bitDict)))[2:])
-        print "%s" % (str(bin(makeBit(word2, bitDict)))[2:])
-        print "Difference: %d" % bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
+print "Bit Stage:  %s seconds" % t.secs
+print "Number of Short Words: %d" % len(banknamesShort)
+print "Number of Long Words: %d" % len(banknamesLong)
+print "Theoretical Number of Matches (short x long): %d" % (len(banknamesShort) * len(banknamesLong))
+print "Number of Total Comparisons: %d" % counter
+print "Number of Potential Matches: %d" % successCounter
+#testword = binDictShort[keyShort][0]
+# for word2 in compareWords:
+#     if bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict)) <= threshold:
+#         print "Comparing %s and %s" % (testword, word2)
+#         print "Bit Representations:"
+#         print "%s" % (str(bin(makeBit(testword, bitDict)))[2:])
+#         print "%s" % (str(bin(makeBit(word2, bitDict)))[2:])
+#         print "Difference: %d" % bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
 
 
 
