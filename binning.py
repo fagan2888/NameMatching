@@ -6,7 +6,7 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 from matplotlib import pylab
 from collections import Counter
-### Notes on stuff
+
 # Got this from here: https://wiki.python.org/moin/BitManipulation
 # Adds up the number of bits that are "on"
 def bitCount(int_type):
