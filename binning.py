@@ -31,11 +31,11 @@ def binCount(string,bins):
         coord.append(sum([stringCounter[z] for z in LETTERS[x:y]]))
     return tuple(coord)
 
-fn = "/Users/pgoldsmithpinkham/Dropbox/Papers/BenmelechStein/bank_data.csv"
+fn = "bank_data.csv"
 with open(fn,'rb') as f:
     reader = csv.reader(f)
     banknamesShort = [line[2].lower() for line in reader if line[2] != "Bank_Name"]
-fn2 = "/Users/pgoldsmithpinkham/Dropbox/Papers/BenmelechStein/call_report_names_unique.csv"
+fn2 = "call_report_names_unique.csv"
 with open(fn2,'rb') as f:
     reader = csv.reader(f)
     banknamesLong = [line[1].lower() for line in reader if line[2] != "rssd9348"]
@@ -96,12 +96,13 @@ compareWords = list(itertools.chain.from_iterable(map(binDictLong.get, [tuple(x)
 #Counting the difference between two words is the number of XOR bits that are on, yes?
 
 for word2 in compareWords:
-    print "Comparing %s and %s" % (testword, word2)
-    print "Bit Representations:"
-    print "%s" % (str(bin(makeBit(testword, bitDict)))[2:])
-    print "%s" % (str(bin(makeBit(word2, bitDict)))[2:])
-    print "Difference: %d" % bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
-    #print word, word2
+    if bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict)) <= threshold:
+        print "Comparing %s and %s" % (testword, word2)
+        print "Bit Representations:"
+        print "%s" % (str(bin(makeBit(testword, bitDict)))[2:])
+        print "%s" % (str(bin(makeBit(word2, bitDict)))[2:])
+        print "Difference: %d" % bitCount(makeBit(testword, bitDict) ^ makeBit(word2, bitDict))
+
 
 
 
